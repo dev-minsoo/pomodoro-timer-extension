@@ -2,10 +2,18 @@ export type PomodoroPhase = "focus" | "break";
 export type PomodoroStatus = "idle" | "running" | "paused";
 export type PomodoroTheme = "light" | "dark";
 
+export type PomodoroSoundType = "beep" | "bell" | "chime" | "soft" | "tick";
+
 export interface PomodoroSettings {
   focusMinutes: number;
   breakMinutes: number;
   autoSwitch: boolean;
+  notificationsEnabled: boolean;
+  soundEnabled: boolean;
+  soundType: PomodoroSoundType;
+  soundRepeatCount: number;
+  openOptionsOnComplete: boolean;
+  badgeEnabled: boolean;
 }
 
 export interface PomodoroState {

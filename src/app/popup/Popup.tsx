@@ -1,17 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   PomodoroRuntimeMessage,
-  PomodoroSettings,
   PomodoroState,
   PomodoroStatePayload,
   PomodoroTheme,
 } from "../../shared/utils/pomodoro";
 
-const DEFAULT_SETTINGS: PomodoroSettings = {
-  focusMinutes: 25,
-  breakMinutes: 5,
-  autoSwitch: true,
-};
+const DEFAULT_FOCUS_MINUTES = 25;
 
 const THEME_STORAGE_KEY = "pomodoroTheme";
 
@@ -111,7 +106,7 @@ function usePomodoroState() {
   const state = payload?.state ?? {
     status: "idle",
     phase: "focus",
-    remainingMs: DEFAULT_SETTINGS.focusMinutes * 60 * 1000,
+    remainingMs: DEFAULT_FOCUS_MINUTES * 60 * 1000,
   };
   const remainingMs = computeRemaining(state, now);
 
@@ -178,7 +173,7 @@ export default function Popup() {
   const isRunning = state.status === "running";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto w-[400px] max-w-[420px] px-5 py-6">
         <header className="mb-5 flex items-start justify-between gap-3">
           <div>
@@ -189,13 +184,22 @@ export default function Popup() {
               {state.phase === "focus" ? "Focus" : "Break"} Session
             </h1>
           </div>
+          <div className="flex flex-col items-end gap-2">
             <button
               className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100"
               onClick={toggleTheme}
               type="button"
             >
-            Theme: {theme}
-          </button>
+              Theme: {theme}
+            </button>
+            <button
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100"
+              onClick={() => chrome.runtime.openOptionsPage()}
+              type="button"
+            >
+              Settings
+            </button>
+          </div>
         </header>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">

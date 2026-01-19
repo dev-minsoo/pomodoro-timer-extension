@@ -1,9 +1,13 @@
-import type { PomodoroPhase, PomodoroRuntimeMessage, PomodoroSettings, PomodoroState, PomodoroStatePayload } from "../../shared/utils/pomodoro";
+import type { PomodoroPhase, PomodoroRuntimeMessage, PomodoroSettings, PomodoroSoundType, PomodoroState, PomodoroStatePayload } from "../../shared/utils/pomodoro";
 
 type RuntimeMessage =
   | PomodoroRuntimeMessage
   | { type: "PING" }
-  | { type: "CONTENT_SCRIPT_READY"; url: string };
+  | { type: "CONTENT_SCRIPT_READY"; url: string }
+  | { type: "POMODORO_SETTINGS_UPDATED" }
+  | { type: "POMODORO_PLAY_SOUND"; soundType: PomodoroSoundType; repeatCount: number }
+  | { type: "POMODORO_PREVIEW_SOUND"; soundType: PomodoroSoundType; repeatCount: number }
+  | { type: "POMODORO_PREVIEW_NOTIFICATION" };
 
 const EXTENSION_NAME = "React Chrome Extension Boilerplate";
 const STORAGE_KEYS = {
@@ -15,6 +19,12 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
   focusMinutes: 25,
   breakMinutes: 5,
   autoSwitch: true,
+  notificationsEnabled: true,
+  soundEnabled: false,
+  soundType: "beep",
+  soundRepeatCount: 1,
+  openOptionsOnComplete: false,
+  badgeEnabled: true,
 };
 
 const END_ALARM_NAME = "pomodoro-end";
@@ -58,8 +68,10 @@ async function loadStateAndSettings(): Promise<PomodoroStatePayload> {
     STORAGE_KEYS.state,
     STORAGE_KEYS.settings,
   ]);
-  const settings = (stored[STORAGE_KEYS.settings] as PomodoroSettings) ||
-    DEFAULT_SETTINGS;
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    ...(stored[STORAGE_KEYS.settings] as Partial<PomodoroSettings> | undefined),
+  };
   const storedState = stored[STORAGE_KEYS.state] as PomodoroState | undefined;
   const state = storedState || getDefaultState(settings);
 
@@ -89,29 +101,81 @@ async function scheduleAlarms(endTime: number) {
   });
 }
 
-async function updateBadge(state: PomodoroState) {
+async function updateBadge(state: PomodoroState, settings: PomodoroSettings = DEFAULT_SETTINGS) {
+  if (!settings.badgeEnabled) {
+    await chrome.action.setBadgeText({ text: "" });
+    return;
+  }
+
   if (state.status !== "running") {
     await chrome.action.setBadgeText({ text: "" });
     return;
   }
 
   const remainingMinutes = Math.max(1, Math.ceil(state.remainingMs / 60000));
-  const text = state.phase === "break" ? `B${remainingMinutes}` : `${remainingMinutes}`;
+  const text = `${remainingMinutes}`;
   await chrome.action.setBadgeText({ text: text.slice(0, 4) });
   await chrome.action.setBadgeBackgroundColor({
     color: state.phase === "break" ? "#10B981" : "#EF4444",
   });
 }
 
-async function showPhaseCompleteNotification(phase: PomodoroPhase) {
-  const title = phase === "focus" ? "집중 종료" : "휴식 종료";
-  const message = phase === "focus" ? "휴식 시간을 시작할게요." : "다시 집중할 시간이에요.";
-  await chrome.notifications.create({
+
+async function ensureOffscreenDocument() {
+  if (!chrome.offscreen?.createDocument) {
+    return;
+  }
+
+  const hasDocument = await chrome.offscreen.hasDocument();
+  if (hasDocument) {
+    return;
+  }
+
+  await chrome.offscreen.createDocument({
+    url: "offscreen.html",
+    reasons: ["AUDIO_PLAYBACK"],
+    justification: "Play pomodoro alert sound",
+  });
+}
+
+async function showPhaseCompleteNotification(
+  phase: PomodoroPhase,
+  settings: PomodoroSettings,
+  { forceNotify = false } = {}
+) {
+  if (settings.soundEnabled) {
+    try {
+      await ensureOffscreenDocument();
+      await chrome.runtime.sendMessage({
+        type: "POMODORO_PLAY_SOUND",
+        soundType: settings.soundType,
+        repeatCount: settings.soundRepeatCount,
+      });
+    } catch (error) {
+      console.warn("Failed to play sound", error);
+    }
+  }
+
+  if (settings.openOptionsOnComplete) {
+    chrome.runtime.openOptionsPage();
+  }
+
+  if (!settings.notificationsEnabled && !forceNotify) {
+    return;
+  }
+
+  const title = phase === "focus" ? "Focus complete" : "Break complete";
+  const message = phase === "focus" ? "Time to take a break." : "Time to focus again.";
+  const notificationId = await chrome.notifications.create({
     type: "basic",
     iconUrl: "icons/icon-128.png",
     title,
     message,
   });
+
+  setTimeout(() => {
+    void chrome.notifications.clear(notificationId);
+  }, 3000);
 }
 
 function getNextPhase(phase: PomodoroPhase): PomodoroPhase {
@@ -123,11 +187,11 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
   const currentState = computeRemaining(payload.state);
 
   if (currentState.status !== "running") {
-    await updateBadge(currentState);
+    await updateBadge(currentState, payload.settings);
     return { ...payload, state: currentState };
   }
 
-  await showPhaseCompleteNotification(currentState.phase);
+  await showPhaseCompleteNotification(currentState.phase, payload.settings);
 
   if (!payload.settings.autoSwitch) {
     const nextPhase = getNextPhase(currentState.phase);
@@ -139,7 +203,8 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
 
     await clearAlarms();
     await saveStateAndSettings({ ...payload, state: nextState });
-    await updateBadge(nextState);
+    await updateBadge(nextState, payload.settings);
+
     return { ...payload, state: nextState };
   }
 
@@ -155,7 +220,7 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
 
   await saveStateAndSettings({ ...payload, state: nextState });
   await scheduleAlarms(endTime);
-  await updateBadge(nextState);
+  await updateBadge(nextState, payload.settings);
 
   return { ...payload, state: nextState };
 }
@@ -164,7 +229,7 @@ async function startPomodoro(): Promise<PomodoroStatePayload> {
   const payload = await loadStateAndSettings();
   const currentState = payload.state;
   if (currentState.status === "running" && currentState.endTime) {
-    await updateBadge(currentState);
+    await updateBadge(currentState, payload.settings);
     return payload;
   }
 
@@ -182,7 +247,7 @@ async function startPomodoro(): Promise<PomodoroStatePayload> {
 
   await saveStateAndSettings({ ...payload, state: nextState });
   await scheduleAlarms(endTime);
-  await updateBadge(nextState);
+  await updateBadge(nextState, payload.settings);
 
   return { ...payload, state: nextState };
 }
@@ -192,7 +257,7 @@ async function pausePomodoro(): Promise<PomodoroStatePayload> {
   const currentState = computeRemaining(payload.state);
 
   if (currentState.status !== "running") {
-    await updateBadge(currentState);
+    await updateBadge(currentState, payload.settings);
     return { ...payload, state: currentState };
   }
 
@@ -204,7 +269,7 @@ async function pausePomodoro(): Promise<PomodoroStatePayload> {
 
   await clearAlarms();
   await saveStateAndSettings({ ...payload, state: nextState });
-  await updateBadge(nextState);
+  await updateBadge(nextState, payload.settings);
 
   return { ...payload, state: nextState };
 }
@@ -215,7 +280,7 @@ async function resetPomodoro(): Promise<PomodoroStatePayload> {
 
   await clearAlarms();
   await saveStateAndSettings({ ...payload, state: nextState });
-  await updateBadge(nextState);
+  await updateBadge(nextState, payload.settings);
 
   return { ...payload, state: nextState };
 }
@@ -232,7 +297,7 @@ async function getPomodoroState(): Promise<PomodoroStatePayload> {
     return handlePhaseComplete();
   }
 
-  await updateBadge(computedState);
+  await updateBadge(computedState, payload.settings);
   return { ...payload, state: computedState };
 }
 
@@ -249,7 +314,7 @@ async function initializePomodoro() {
     await scheduleAlarms(state.endTime);
   }
 
-  await updateBadge(state);
+  await updateBadge(state, payload.settings);
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -303,6 +368,46 @@ chrome.runtime.onMessage.addListener(
     if (message?.type === "POMODORO_RESET") {
       void resetPomodoro().then(sendResponse);
       return true;
+    }
+
+    if (message?.type === "POMODORO_SETTINGS_UPDATED") {
+      void loadStateAndSettings().then(({ state, settings }) => {
+        void updateBadge(state, settings);
+      });
+      sendResponse({ type: "PONG", timestamp: Date.now() });
+      return false;
+    }
+
+    if (message?.type === "POMODORO_PREVIEW_SOUND") {
+      void (async () => {
+        try {
+          await ensureOffscreenDocument();
+          await chrome.runtime.sendMessage({
+            type: "POMODORO_PLAY_SOUND",
+            soundType: message.soundType,
+            repeatCount: message.repeatCount,
+          });
+        } catch (error) {
+          console.warn("Failed to preview sound", error);
+        }
+      })();
+      sendResponse({ type: "PONG", timestamp: Date.now() });
+      return false;
+    }
+
+    if (message?.type === "POMODORO_PREVIEW_NOTIFICATION") {
+      void (async () => {
+        try {
+          const payload = await loadStateAndSettings();
+          await showPhaseCompleteNotification(payload.state.phase, payload.settings, {
+            forceNotify: true,
+          });
+        } catch (error) {
+          console.warn("Failed to preview notification", error);
+        }
+      })();
+      sendResponse({ type: "PONG", timestamp: Date.now() });
+      return false;
     }
 
     return false;

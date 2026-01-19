@@ -18,7 +18,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["storage", "tabs", "alarms", "notifications"],
+  "permissions": ["storage", "tabs", "alarms", "notifications", "offscreen"],
   "host_permissions": ["<all_urls>"],
   "content_scripts": [
     {
