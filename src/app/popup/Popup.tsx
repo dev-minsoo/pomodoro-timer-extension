@@ -15,23 +15,6 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
 
 const THEME_STORAGE_KEY = "pomodoroTheme";
 
-async function openSidePanel() {
-  if (!chrome.sidePanel?.open) {
-    return;
-  }
-
-  const currentWindow = await chrome.windows.getCurrent();
-
-  if (typeof currentWindow.id !== "number") {
-    return;
-  }
-
-  await chrome.sidePanel.open({ windowId: currentWindow.id });
-}
-
-function openOptions() {
-  chrome.runtime.openOptionsPage();
-}
 
 function isPomodoroTheme(value: unknown): value is PomodoroTheme {
   return value === "light" || value === "dark";
@@ -224,27 +207,6 @@ export default function Popup() {
           </div>
         </section>
 
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Quick Actions
-          </h2>
-          <div className="mt-3 grid gap-2">
-            <button
-              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-              onClick={openSidePanel}
-              type="button"
-            >
-              Open Side Panel
-            </button>
-            <button
-              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-              onClick={openOptions}
-              type="button"
-            >
-              Open Options
-            </button>
-          </div>
-        </section>
       </div>
     </div>
   );
