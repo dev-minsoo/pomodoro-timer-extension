@@ -1,11 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "React Chrome Extension Boilerplate",
-  "description": "MV3 boilerplate with React, TypeScript, TailwindCSS, and Vite.",
+  "name": "Focus Session",
+  "description": "A focus session built on the Pomodoro technique to help you stay immersed and productive.",
   "version": "0.1.0",
   "action": {
-    "default_title": "Open Popup",
+    "default_title": "Open Focus Session",
     "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   },
   "options_page": "options.html",
   "background": {

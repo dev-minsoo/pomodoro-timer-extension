@@ -108,7 +108,7 @@ async function showPhaseCompleteNotification(phase: PomodoroPhase) {
   const message = phase === "focus" ? "휴식 시간을 시작할게요." : "다시 집중할 시간이에요.";
   await chrome.notifications.create({
     type: "basic",
-    iconUrl: "vite.svg",
+    iconUrl: "icons/icon-128.png",
     title,
     message,
   });
