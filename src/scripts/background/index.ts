@@ -399,9 +399,18 @@ chrome.runtime.onMessage.addListener(
       void (async () => {
         try {
           const payload = await loadStateAndSettings();
-          await showPhaseCompleteNotification(payload.state.phase, payload.settings, {
-            forceNotify: true,
+          const phase = payload.state.phase;
+          const title = phase === "focus" ? "Focus complete" : "Break complete";
+          const body = phase === "focus" ? "Time to take a break." : "Time to focus again.";
+          const notificationId = await chrome.notifications.create({
+            type: "basic",
+            iconUrl: "icons/icon-128.png",
+            title,
+            message: body,
           });
+          setTimeout(() => {
+            void chrome.notifications.clear(notificationId);
+          }, 3000);
         } catch (error) {
           console.warn("Failed to preview notification", error);
         }
