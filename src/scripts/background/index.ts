@@ -332,6 +332,33 @@ async function resetPomodoro(): Promise<PomodoroStatePayload> {
   return { ...payload, state: nextState };
 }
 
+async function skipPomodoro(): Promise<PomodoroStatePayload> {
+  const payload = await loadStateAndSettings();
+  const currentState = computeRemaining(payload.state);
+  const { nextPhase, nextCompletedFocusSessions } = getNextPhaseAndCount(
+    currentState.phase,
+    payload.settings,
+    currentState.completedFocusSessions,
+    { countCompleted: false }
+  );
+  const remainingMs = getPhaseDurationMs(payload.settings, nextPhase);
+  const endTime = Date.now() + remainingMs;
+  const nextState: PomodoroState = {
+    status: "running",
+    phase: nextPhase,
+    remainingMs,
+    endTime,
+    completedFocusSessions: nextCompletedFocusSessions,
+  };
+
+  await clearAlarms();
+  await saveStateAndSettings({ ...payload, state: nextState });
+  await scheduleAlarms(endTime);
+  await updateBadge(nextState, payload.settings);
+
+  return { ...payload, state: nextState };
+}
+
 async function getPomodoroState(): Promise<PomodoroStatePayload> {
   const payload = await loadStateAndSettings();
   const computedState = computeRemaining(payload.state);
@@ -414,6 +441,11 @@ chrome.runtime.onMessage.addListener(
 
     if (message?.type === "POMODORO_RESET") {
       void resetPomodoro().then(sendResponse);
+      return true;
+    }
+
+    if (message?.type === "POMODORO_SKIP") {
+      void skipPomodoro().then(sendResponse);
       return true;
     }
 

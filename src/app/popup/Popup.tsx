@@ -128,6 +128,11 @@ function usePomodoroState() {
     setPayload(data);
   };
 
+  const skip = async () => {
+    const data = await sendPomodoroMessage({ type: "POMODORO_SKIP" });
+    setPayload(data);
+  };
+
   return {
     state,
     settings: payload?.settings ?? null,
@@ -136,6 +141,7 @@ function usePomodoroState() {
     start,
     pause,
     reset,
+    skip,
   };
 }
 
@@ -170,7 +176,8 @@ function useTheme() {
 }
 
 export default function Popup() {
-  const { state, settings, display, start, pause, reset } = usePomodoroState();
+  const { state, settings, display, start, pause, reset, skip } =
+    usePomodoroState();
   useTheme();
   const isRunning = state.status === "running";
   const longBreakInterval = settings?.longBreakInterval ?? 4;
@@ -229,13 +236,20 @@ export default function Popup() {
               {state.completedFocusSessions}/{longBreakInterval}
             </span>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid grid-cols-3 gap-2">
             <button
               className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
               onClick={isRunning ? pause : start}
               type="button"
             >
               {isRunning ? "Pause" : "Start"}
+            </button>
+            <button
+              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+              onClick={skip}
+              type="button"
+            >
+              Skip
             </button>
             <button
               className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"

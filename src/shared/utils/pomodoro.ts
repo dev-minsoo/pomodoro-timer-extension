@@ -35,4 +35,5 @@ export type PomodoroRuntimeMessage =
   | { type: "POMODORO_GET_STATE" }
   | { type: "POMODORO_START" }
   | { type: "POMODORO_PAUSE" }
-  | { type: "POMODORO_RESET" };
+  | { type: "POMODORO_RESET" }
+  | { type: "POMODORO_SKIP" };
