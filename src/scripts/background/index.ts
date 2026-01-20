@@ -18,6 +18,8 @@ const STORAGE_KEYS = {
 const DEFAULT_SETTINGS: PomodoroSettings = {
   focusMinutes: 25,
   breakMinutes: 5,
+  longBreakMinutes: 15,
+  longBreakInterval: 4,
   autoSwitch: true,
   notificationsEnabled: true,
   soundEnabled: false,
@@ -43,7 +45,19 @@ function ensureActionOpensPopup() {
 }
 
 function getPhaseDurationMs(settings: PomodoroSettings, phase: PomodoroPhase) {
-  return (phase === "focus" ? settings.focusMinutes : settings.breakMinutes) * 60 * 1000;
+  if (phase === "focus") {
+    return settings.focusMinutes * 60 * 1000;
+  }
+
+  if (phase === "longBreak") {
+    return settings.longBreakMinutes * 60 * 1000;
+  }
+
+  return settings.breakMinutes * 60 * 1000;
+}
+
+function isPomodoroPhase(value: string): value is PomodoroPhase {
+  return value === "focus" || value === "break" || value === "longBreak";
 }
 
 function getDefaultState(settings: PomodoroSettings): PomodoroState {
@@ -51,6 +65,7 @@ function getDefaultState(settings: PomodoroSettings): PomodoroState {
     status: "idle",
     phase: "focus",
     remainingMs: getPhaseDurationMs(settings, "focus"),
+    completedFocusSessions: 0,
   };
 }
 
@@ -73,7 +88,12 @@ async function loadStateAndSettings(): Promise<PomodoroStatePayload> {
     ...(stored[STORAGE_KEYS.settings] as Partial<PomodoroSettings> | undefined),
   };
   const storedState = stored[STORAGE_KEYS.state] as PomodoroState | undefined;
-  const state = storedState || getDefaultState(settings);
+  const state = storedState
+    ? {
+        ...storedState,
+        completedFocusSessions: storedState.completedFocusSessions ?? 0,
+      }
+    : getDefaultState(settings);
 
   return {
     state: computeRemaining(state),
@@ -116,7 +136,7 @@ async function updateBadge(state: PomodoroState, settings: PomodoroSettings = DE
   const text = `${remainingMinutes}`;
   await chrome.action.setBadgeText({ text: text.slice(0, 4) });
   await chrome.action.setBadgeBackgroundColor({
-    color: state.phase === "break" ? "#10B981" : "#EF4444",
+    color: state.phase === "focus" ? "#EF4444" : "#10B981",
   });
 }
 
@@ -164,7 +184,12 @@ async function showPhaseCompleteNotification(
     return;
   }
 
-  const title = phase === "focus" ? "Focus complete" : "Break complete";
+  const title =
+    phase === "focus"
+      ? "Focus complete"
+      : phase === "longBreak"
+        ? "Long break complete"
+        : "Break complete";
   const message = phase === "focus" ? "Time to take a break." : "Time to focus again.";
   const notificationId = await chrome.notifications.create({
     type: "basic",
@@ -178,8 +203,28 @@ async function showPhaseCompleteNotification(
   }, 3000);
 }
 
-function getNextPhase(phase: PomodoroPhase): PomodoroPhase {
-  return phase === "focus" ? "break" : "focus";
+function getNextPhaseAndCount(
+  phase: PomodoroPhase,
+  settings: PomodoroSettings,
+  completedFocusSessions: number,
+  { countCompleted }: { countCompleted: boolean }
+): { nextPhase: "focus" | "break" | "longBreak"; nextCompletedFocusSessions: number } {
+  if (phase === "focus") {
+    const interval = Math.max(1, settings.longBreakInterval);
+    const nextCount = countCompleted
+      ? Math.min(interval, completedFocusSessions + 1)
+      : completedFocusSessions;
+    const nextPhase: PomodoroPhase = nextCount >= interval ? "longBreak" : "break";
+    return { nextPhase, nextCompletedFocusSessions: nextCount };
+  }
+
+  if (phase === "longBreak") {
+    const nextPhase: PomodoroPhase = "focus";
+    return { nextPhase, nextCompletedFocusSessions: 0 };
+  }
+
+  const nextPhase: PomodoroPhase = "focus";
+  return { nextPhase, nextCompletedFocusSessions: completedFocusSessions };
 }
 
 async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
@@ -193,12 +238,20 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
 
   await showPhaseCompleteNotification(currentState.phase, payload.settings);
 
+  const { nextPhase, nextCompletedFocusSessions } = getNextPhaseAndCount(
+    currentState.phase,
+    payload.settings,
+    currentState.completedFocusSessions,
+    { countCompleted: true }
+  );
+  const resolvedNextPhase = isPomodoroPhase(nextPhase) ? nextPhase : "focus";
+
   if (!payload.settings.autoSwitch) {
-    const nextPhase = getNextPhase(currentState.phase);
     const nextState: PomodoroState = {
       status: "idle",
-      phase: nextPhase,
-      remainingMs: getPhaseDurationMs(payload.settings, nextPhase),
+      phase: resolvedNextPhase,
+      remainingMs: getPhaseDurationMs(payload.settings, resolvedNextPhase),
+      completedFocusSessions: nextCompletedFocusSessions,
     };
 
     await clearAlarms();
@@ -208,14 +261,14 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
     return { ...payload, state: nextState };
   }
 
-  const nextPhase = getNextPhase(currentState.phase);
-  const remainingMs = getPhaseDurationMs(payload.settings, nextPhase);
+  const remainingMs = getPhaseDurationMs(payload.settings, resolvedNextPhase);
   const endTime = Date.now() + remainingMs;
   const nextState: PomodoroState = {
     status: "running",
-    phase: nextPhase,
+    phase: resolvedNextPhase,
     remainingMs,
     endTime,
+    completedFocusSessions: nextCompletedFocusSessions,
   };
 
   await saveStateAndSettings({ ...payload, state: nextState });
@@ -243,6 +296,7 @@ async function startPomodoro(): Promise<PomodoroStatePayload> {
     phase: currentState.phase,
     remainingMs,
     endTime,
+    completedFocusSessions: currentState.completedFocusSessions,
   };
 
   await saveStateAndSettings({ ...payload, state: nextState });
@@ -280,6 +334,34 @@ async function resetPomodoro(): Promise<PomodoroStatePayload> {
 
   await clearAlarms();
   await saveStateAndSettings({ ...payload, state: nextState });
+  await updateBadge(nextState, payload.settings);
+
+  return { ...payload, state: nextState };
+}
+
+async function skipPomodoro(): Promise<PomodoroStatePayload> {
+  const payload = await loadStateAndSettings();
+  const currentState = computeRemaining(payload.state);
+  const { nextPhase, nextCompletedFocusSessions } = getNextPhaseAndCount(
+    currentState.phase,
+    payload.settings,
+    currentState.completedFocusSessions,
+    { countCompleted: false }
+  );
+  const resolvedNextPhase = isPomodoroPhase(nextPhase) ? nextPhase : "focus";
+  const remainingMs = getPhaseDurationMs(payload.settings, resolvedNextPhase);
+  const endTime = Date.now() + remainingMs;
+  const nextState: PomodoroState = {
+    status: "running",
+    phase: resolvedNextPhase,
+    remainingMs,
+    endTime,
+    completedFocusSessions: nextCompletedFocusSessions,
+  };
+
+  await clearAlarms();
+  await saveStateAndSettings({ ...payload, state: nextState });
+  await scheduleAlarms(endTime);
   await updateBadge(nextState, payload.settings);
 
   return { ...payload, state: nextState };
@@ -370,6 +452,11 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
 
+    if (message?.type === "POMODORO_SKIP") {
+      void skipPomodoro().then(sendResponse);
+      return true;
+    }
+
     if (message?.type === "POMODORO_SETTINGS_UPDATED") {
       void loadStateAndSettings().then(({ state, settings }) => {
         void updateBadge(state, settings);
@@ -400,7 +487,12 @@ chrome.runtime.onMessage.addListener(
         try {
           const payload = await loadStateAndSettings();
           const phase = payload.state.phase;
-          const title = phase === "focus" ? "Focus complete" : "Break complete";
+          const title =
+            phase === "focus"
+              ? "Focus complete"
+              : phase === "longBreak"
+                ? "Long break complete"
+                : "Break complete";
           const body = phase === "focus" ? "Time to take a break." : "Time to focus again.";
           const notificationId = await chrome.notifications.create({
             type: "basic",
@@ -422,3 +514,16 @@ chrome.runtime.onMessage.addListener(
     return false;
   }
 );
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  void chrome.notifications.clear(notificationId);
+  if (chrome.action?.openPopup) {
+    chrome.action.openPopup().catch((error: unknown) => {
+      console.warn("Failed to open popup", error);
+      chrome.runtime.openOptionsPage();
+    });
+    return;
+  }
+
+  chrome.runtime.openOptionsPage();
+});

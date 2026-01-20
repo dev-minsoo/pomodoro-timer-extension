@@ -1,4 +1,4 @@
-export type PomodoroPhase = "focus" | "break";
+export type PomodoroPhase = "focus" | "break" | "longBreak";
 export type PomodoroStatus = "idle" | "running" | "paused";
 export type PomodoroTheme = "light" | "dark";
 
@@ -7,6 +7,8 @@ export type PomodoroSoundType = "beep" | "bell" | "chime" | "soft" | "tick";
 export interface PomodoroSettings {
   focusMinutes: number;
   breakMinutes: number;
+  longBreakMinutes: number;
+  longBreakInterval: number;
   autoSwitch: boolean;
   notificationsEnabled: boolean;
   soundEnabled: boolean;
@@ -21,6 +23,7 @@ export interface PomodoroState {
   phase: PomodoroPhase;
   remainingMs: number;
   endTime?: number;
+  completedFocusSessions: number;
 }
 
 export interface PomodoroStatePayload {
@@ -32,4 +35,5 @@ export type PomodoroRuntimeMessage =
   | { type: "POMODORO_GET_STATE" }
   | { type: "POMODORO_START" }
   | { type: "POMODORO_PAUSE" }
-  | { type: "POMODORO_RESET" };
+  | { type: "POMODORO_RESET" }
+  | { type: "POMODORO_SKIP" };

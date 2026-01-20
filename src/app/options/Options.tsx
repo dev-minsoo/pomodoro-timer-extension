@@ -7,6 +7,8 @@ const THEME_STORAGE_KEY = "pomodoroTheme";
 const DEFAULT_SETTINGS: PomodoroSettings = {
   focusMinutes: 25,
   breakMinutes: 5,
+  longBreakMinutes: 15,
+  longBreakInterval: 4,
   autoSwitch: true,
   notificationsEnabled: true,
   soundEnabled: false,
@@ -98,7 +100,7 @@ export default function Options() {
   };
 
   const handleNumberChange = (
-    key: "focusMinutes" | "breakMinutes",
+    key: "focusMinutes" | "breakMinutes" | "longBreakMinutes" | "longBreakInterval",
     value: string,
   ) => {
     const parsed = Number.parseInt(value, 10);
@@ -184,6 +186,30 @@ export default function Options() {
                     value={settings.breakMinutes}
                     onChange={(event) =>
                       handleNumberChange("breakMinutes", event.target.value)
+                    }
+                  />
+                </label>
+                <label className="space-y-2 text-sm font-medium">
+                  Long break minutes
+                  <input
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    min={1}
+                    type="number"
+                    value={settings.longBreakMinutes}
+                    onChange={(event) =>
+                      handleNumberChange("longBreakMinutes", event.target.value)
+                    }
+                  />
+                </label>
+                <label className="space-y-2 text-sm font-medium">
+                  Long break interval
+                  <input
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    min={1}
+                    type="number"
+                    value={settings.longBreakInterval}
+                    onChange={(event) =>
+                      handleNumberChange("longBreakInterval", event.target.value)
                     }
                   />
                 </label>

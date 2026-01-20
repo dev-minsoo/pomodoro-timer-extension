@@ -107,6 +107,7 @@ function usePomodoroState() {
     status: "idle",
     phase: "focus",
     remainingMs: DEFAULT_FOCUS_MINUTES * 60 * 1000,
+    completedFocusSessions: 0,
   };
   const remainingMs = computeRemaining(state, now);
 
@@ -127,13 +128,20 @@ function usePomodoroState() {
     setPayload(data);
   };
 
+  const skip = async () => {
+    const data = await sendPomodoroMessage({ type: "POMODORO_SKIP" });
+    setPayload(data);
+  };
+
   return {
     state,
+    settings: payload?.settings ?? null,
     remainingMs,
     display,
     start,
     pause,
     reset,
+    skip,
   };
 }
 
@@ -168,9 +176,23 @@ function useTheme() {
 }
 
 export default function Popup() {
-  const { state, display, start, pause, reset } = usePomodoroState();
+  const { state, settings, display, start, pause, reset, skip } =
+    usePomodoroState();
   useTheme();
   const isRunning = state.status === "running";
+  const rawLongBreakInterval = settings?.longBreakInterval ?? 4;
+  const longBreakInterval = rawLongBreakInterval > 0 ? rawLongBreakInterval : 1;
+  const cycleProgress = Math.min(
+    state.completedFocusSessions,
+    longBreakInterval,
+  );
+  const cyclePercent = (cycleProgress / longBreakInterval) * 100;
+  const phaseLabel =
+    state.phase === "focus"
+      ? "Focus"
+      : state.phase === "longBreak"
+        ? "Long Break"
+        : "Break";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
@@ -181,7 +203,7 @@ export default function Popup() {
               Pomodoro
             </p>
             <h1 className="mt-1 text-xl font-semibold tracking-tight">
-              {state.phase === "focus" ? "Focus" : "Break"} Session
+              {phaseLabel} Session
             </h1>
           </div>
           <button
@@ -211,16 +233,37 @@ export default function Popup() {
                   : "text-green-600 dark:text-green-400"
               }`}
             >
-              {state.phase}
+              {phaseLabel}
             </span>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <div className="flex items-center justify-between">
+              <span>Cycle</span>
+              <span className="text-slate-700 dark:text-slate-100">
+                {cycleProgress}/{longBreakInterval}
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+              <div
+                className="h-full rounded-full bg-red-500 transition-[width] duration-300 dark:bg-red-400"
+                style={{ width: `${cyclePercent}%` }}
+              />
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2">
             <button
               className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
               onClick={isRunning ? pause : start}
               type="button"
             >
               {isRunning ? "Pause" : "Start"}
+            </button>
+            <button
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:border-red-300 hover:bg-red-100 dark:border-red-500/40 dark:bg-red-950 dark:text-red-200 dark:hover:border-red-400 dark:hover:bg-red-900/60"
+              onClick={skip}
+              type="button"
+            >
+              Skip
             </button>
             <button
               className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"
