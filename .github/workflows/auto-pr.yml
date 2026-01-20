@@ -1,0 +1,60 @@
+name: Auto Draft PR
+
+on:
+  push:
+    branches:
+      - "feat/**"
+      - "fix/**"
+      - "chore/**"
+      - "refactor/**"
+      - "docs/**"
+      - "test/**"
+      - "style/**"
+      - "perf/**"
+
+jobs:
+  create-draft-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create draft PR if missing
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const head = context.ref.replace('refs/heads/', '');
+            const base = 'main';
+            const templatePath = '.github/pull_request_template.md';
+            const body = fs.existsSync(templatePath)
+              ? fs.readFileSync(templatePath, 'utf8')
+              : '';
+
+            const { data: pulls } = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${head}`,
+              state: 'open',
+            });
+
+            if (pulls.length > 0) {
+              core.info(`PR already exists for ${head}`);
+              return;
+            }
+
+            await github.rest.pulls.create({
+              owner,
+              repo,
+              title: head,
+              head,
+              base,
+              draft: true,
+              body,
+            });
