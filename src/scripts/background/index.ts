@@ -514,3 +514,16 @@ chrome.runtime.onMessage.addListener(
     return false;
   }
 );
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  void chrome.notifications.clear(notificationId);
+  if (chrome.action?.openPopup) {
+    chrome.action.openPopup().catch((error: unknown) => {
+      console.warn("Failed to open popup", error);
+      chrome.runtime.openOptionsPage();
+    });
+    return;
+  }
+
+  chrome.runtime.openOptionsPage();
+});
