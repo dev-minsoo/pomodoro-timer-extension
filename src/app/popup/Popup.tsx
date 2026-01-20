@@ -169,7 +169,7 @@ function useTheme() {
 
 export default function Popup() {
   const { state, display, start, pause, reset } = usePomodoroState();
-  const { theme, toggleTheme } = useTheme();
+  useTheme();
   const isRunning = state.status === "running";
 
   return (
@@ -184,22 +184,13 @@ export default function Popup() {
               {state.phase === "focus" ? "Focus" : "Break"} Session
             </h1>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <button
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100"
-              onClick={toggleTheme}
-              type="button"
-            >
-              Theme: {theme}
-            </button>
-            <button
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100"
-              onClick={() => chrome.runtime.openOptionsPage()}
-              type="button"
-            >
-              Settings
-            </button>
-          </div>
+          <button
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100"
+            onClick={() => chrome.runtime.openOptionsPage()}
+            type="button"
+          >
+            Settings
+          </button>
         </header>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -213,7 +204,13 @@ export default function Popup() {
             <span className="text-4xl font-semibold tabular-nums text-slate-900 dark:text-slate-100">
               {display}
             </span>
-            <span className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            <span
+              className={`text-sm font-medium uppercase tracking-[0.2em] ${
+                state.phase === "focus"
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-600 dark:text-green-400"
+              }`}
+            >
               {state.phase}
             </span>
           </div>
