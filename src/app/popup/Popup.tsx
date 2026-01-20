@@ -130,6 +130,7 @@ function usePomodoroState() {
 
   return {
     state,
+    settings: payload?.settings ?? null,
     remainingMs,
     display,
     start,
@@ -169,9 +170,16 @@ function useTheme() {
 }
 
 export default function Popup() {
-  const { state, display, start, pause, reset } = usePomodoroState();
+  const { state, settings, display, start, pause, reset } = usePomodoroState();
   useTheme();
   const isRunning = state.status === "running";
+  const longBreakInterval = settings?.longBreakInterval ?? 4;
+  const phaseLabel =
+    state.phase === "focus"
+      ? "Focus"
+      : state.phase === "longBreak"
+        ? "Long Break"
+        : "Break";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
@@ -182,7 +190,7 @@ export default function Popup() {
               Pomodoro
             </p>
             <h1 className="mt-1 text-xl font-semibold tracking-tight">
-              {state.phase === "focus" ? "Focus" : "Break"} Session
+              {phaseLabel} Session
             </h1>
           </div>
           <button
@@ -212,7 +220,13 @@ export default function Popup() {
                   : "text-green-600 dark:text-green-400"
               }`}
             >
-              {state.phase}
+              {phaseLabel}
+            </span>
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span>Cycle</span>
+            <span className="text-slate-700 dark:text-slate-100">
+              {state.completedFocusSessions}/{longBreakInterval}
             </span>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">

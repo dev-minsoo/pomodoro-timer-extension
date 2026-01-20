@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
   focusMinutes: 25,
   breakMinutes: 5,
   longBreakMinutes: 15,
+  longBreakInterval: 4,
   autoSwitch: true,
   notificationsEnabled: true,
   soundEnabled: false,
@@ -30,7 +31,6 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
 
 const END_ALARM_NAME = "pomodoro-end";
 const TICK_ALARM_NAME = "pomodoro-tick";
-const LONG_BREAK_INTERVAL = 4;
 
 function ensureActionOpensPopup() {
   if (!chrome.sidePanel?.setPanelBehavior) {
@@ -201,14 +201,16 @@ async function showPhaseCompleteNotification(
 
 function getNextPhaseAndCount(
   phase: PomodoroPhase,
+  settings: PomodoroSettings,
   completedFocusSessions: number,
   { countCompleted }: { countCompleted: boolean }
 ) {
   if (phase === "focus") {
+    const interval = Math.max(1, settings.longBreakInterval);
     const nextCount = countCompleted
-      ? Math.min(LONG_BREAK_INTERVAL, completedFocusSessions + 1)
+      ? Math.min(interval, completedFocusSessions + 1)
       : completedFocusSessions;
-    const nextPhase = nextCount >= LONG_BREAK_INTERVAL ? "longBreak" : "break";
+    const nextPhase = nextCount >= interval ? "longBreak" : "break";
     return { nextPhase, nextCompletedFocusSessions: nextCount };
   }
 
@@ -232,6 +234,7 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
 
   const { nextPhase, nextCompletedFocusSessions } = getNextPhaseAndCount(
     currentState.phase,
+    payload.settings,
     currentState.completedFocusSessions,
     { countCompleted: true }
   );

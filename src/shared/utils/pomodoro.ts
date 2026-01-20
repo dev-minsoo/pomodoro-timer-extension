@@ -8,6 +8,7 @@ export interface PomodoroSettings {
   focusMinutes: number;
   breakMinutes: number;
   longBreakMinutes: number;
+  longBreakInterval: number;
   autoSwitch: boolean;
   notificationsEnabled: boolean;
   soundEnabled: boolean;
