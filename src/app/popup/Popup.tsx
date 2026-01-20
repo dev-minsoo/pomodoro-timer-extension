@@ -180,7 +180,13 @@ export default function Popup() {
     usePomodoroState();
   useTheme();
   const isRunning = state.status === "running";
-  const longBreakInterval = settings?.longBreakInterval ?? 4;
+  const rawLongBreakInterval = settings?.longBreakInterval ?? 4;
+  const longBreakInterval = rawLongBreakInterval > 0 ? rawLongBreakInterval : 1;
+  const cycleProgress = Math.min(
+    state.completedFocusSessions,
+    longBreakInterval,
+  );
+  const cyclePercent = (cycleProgress / longBreakInterval) * 100;
   const phaseLabel =
     state.phase === "focus"
       ? "Focus"
@@ -230,11 +236,19 @@ export default function Popup() {
               {phaseLabel}
             </span>
           </div>
-          <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            <span>Cycle</span>
-            <span className="text-slate-700 dark:text-slate-100">
-              {state.completedFocusSessions}/{longBreakInterval}
-            </span>
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <div className="flex items-center justify-between">
+              <span>Cycle</span>
+              <span className="text-slate-700 dark:text-slate-100">
+                {cycleProgress}/{longBreakInterval}
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+              <div
+                className="h-full rounded-full bg-red-500 transition-[width] duration-300 dark:bg-red-400"
+                style={{ width: `${cyclePercent}%` }}
+              />
+            </div>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2">
             <button
@@ -245,7 +259,7 @@ export default function Popup() {
               {isRunning ? "Pause" : "Start"}
             </button>
             <button
-              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:border-red-300 hover:bg-red-100 dark:border-red-500/40 dark:bg-red-950 dark:text-red-200 dark:hover:border-red-400 dark:hover:bg-red-900/60"
               onClick={skip}
               type="button"
             >
