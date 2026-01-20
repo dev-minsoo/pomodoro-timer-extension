@@ -107,6 +107,7 @@ function usePomodoroState() {
     status: "idle",
     phase: "focus",
     remainingMs: DEFAULT_FOCUS_MINUTES * 60 * 1000,
+    completedFocusSessions: 0,
   };
   const remainingMs = computeRemaining(state, now);
 

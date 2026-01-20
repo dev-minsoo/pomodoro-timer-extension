@@ -7,6 +7,7 @@ const THEME_STORAGE_KEY = "pomodoroTheme";
 const DEFAULT_SETTINGS: PomodoroSettings = {
   focusMinutes: 25,
   breakMinutes: 5,
+  longBreakMinutes: 15,
   autoSwitch: true,
   notificationsEnabled: true,
   soundEnabled: false,
