@@ -56,6 +56,10 @@ function getPhaseDurationMs(settings: PomodoroSettings, phase: PomodoroPhase) {
   return settings.breakMinutes * 60 * 1000;
 }
 
+function isPomodoroPhase(value: string): value is PomodoroPhase {
+  return value === "focus" || value === "break" || value === "longBreak";
+}
+
 function getDefaultState(settings: PomodoroSettings): PomodoroState {
   return {
     status: "idle",
@@ -204,21 +208,23 @@ function getNextPhaseAndCount(
   settings: PomodoroSettings,
   completedFocusSessions: number,
   { countCompleted }: { countCompleted: boolean }
-) {
+): { nextPhase: "focus" | "break" | "longBreak"; nextCompletedFocusSessions: number } {
   if (phase === "focus") {
     const interval = Math.max(1, settings.longBreakInterval);
     const nextCount = countCompleted
       ? Math.min(interval, completedFocusSessions + 1)
       : completedFocusSessions;
-    const nextPhase = nextCount >= interval ? "longBreak" : "break";
+    const nextPhase: PomodoroPhase = nextCount >= interval ? "longBreak" : "break";
     return { nextPhase, nextCompletedFocusSessions: nextCount };
   }
 
   if (phase === "longBreak") {
-    return { nextPhase: "focus", nextCompletedFocusSessions: 0 };
+    const nextPhase: PomodoroPhase = "focus";
+    return { nextPhase, nextCompletedFocusSessions: 0 };
   }
 
-  return { nextPhase: "focus", nextCompletedFocusSessions: completedFocusSessions };
+  const nextPhase: PomodoroPhase = "focus";
+  return { nextPhase, nextCompletedFocusSessions: completedFocusSessions };
 }
 
 async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
@@ -238,12 +244,13 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
     currentState.completedFocusSessions,
     { countCompleted: true }
   );
+  const resolvedNextPhase = isPomodoroPhase(nextPhase) ? nextPhase : "focus";
 
   if (!payload.settings.autoSwitch) {
     const nextState: PomodoroState = {
       status: "idle",
-      phase: nextPhase,
-      remainingMs: getPhaseDurationMs(payload.settings, nextPhase),
+      phase: resolvedNextPhase,
+      remainingMs: getPhaseDurationMs(payload.settings, resolvedNextPhase),
       completedFocusSessions: nextCompletedFocusSessions,
     };
 
@@ -254,11 +261,11 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
     return { ...payload, state: nextState };
   }
 
-  const remainingMs = getPhaseDurationMs(payload.settings, nextPhase);
+  const remainingMs = getPhaseDurationMs(payload.settings, resolvedNextPhase);
   const endTime = Date.now() + remainingMs;
   const nextState: PomodoroState = {
     status: "running",
-    phase: nextPhase,
+    phase: resolvedNextPhase,
     remainingMs,
     endTime,
     completedFocusSessions: nextCompletedFocusSessions,
@@ -341,11 +348,12 @@ async function skipPomodoro(): Promise<PomodoroStatePayload> {
     currentState.completedFocusSessions,
     { countCompleted: false }
   );
-  const remainingMs = getPhaseDurationMs(payload.settings, nextPhase);
+  const resolvedNextPhase = isPomodoroPhase(nextPhase) ? nextPhase : "focus";
+  const remainingMs = getPhaseDurationMs(payload.settings, resolvedNextPhase);
   const endTime = Date.now() + remainingMs;
   const nextState: PomodoroState = {
     status: "running",
-    phase: nextPhase,
+    phase: resolvedNextPhase,
     remainingMs,
     endTime,
     completedFocusSessions: nextCompletedFocusSessions,
