@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "pomodoro_timer",
+  "name": "Pomodoro Timer",
   "description": "Pomodoro timer to help you stay focused and productive.",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "action": {
-    "default_title": "Open pomodoro_timer",
+    "default_title": "Open Pomodoro Timer",
     "default_popup": "popup.html"
   },
   "icons": {
