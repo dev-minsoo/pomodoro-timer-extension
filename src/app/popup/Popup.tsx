@@ -7,6 +7,8 @@ import type {
 } from "../../shared/utils/pomodoro";
 
 const DEFAULT_FOCUS_MINUTES = 25;
+const DEFAULT_BREAK_MINUTES = 5;
+const DEFAULT_LONG_BREAK_MINUTES = 15;
 
 const THEME_STORAGE_KEY = "pomodoroTheme";
 
@@ -108,6 +110,7 @@ function usePomodoroState() {
     phase: "focus",
     remainingMs: DEFAULT_FOCUS_MINUTES * 60 * 1000,
     completedFocusSessions: 0,
+    totalCycles: 0,
   };
   const remainingMs = computeRemaining(state, now);
 
@@ -176,10 +179,12 @@ function useTheme() {
 }
 
 export default function Popup() {
-  const { state, settings, display, start, pause, reset, skip } =
+  const { state, settings, remainingMs, display, start, pause, reset, skip } =
     usePomodoroState();
   useTheme();
   const isRunning = state.status === "running";
+  const isCompact = settings?.compactMode ?? false;
+  const timerDisplayMode = settings?.timerDisplayMode ?? "text";
   const rawLongBreakInterval = settings?.longBreakInterval ?? 4;
   const longBreakInterval = rawLongBreakInterval > 0 ? rawLongBreakInterval : 1;
   const cycleProgress = Math.min(
@@ -187,6 +192,25 @@ export default function Popup() {
     longBreakInterval,
   );
   const cyclePercent = (cycleProgress / longBreakInterval) * 100;
+  const focusMs = (settings?.focusMinutes ?? DEFAULT_FOCUS_MINUTES) * 60 * 1000;
+  const breakMs =
+    (settings?.breakMinutes ?? DEFAULT_BREAK_MINUTES) * 60 * 1000;
+  const longBreakMs =
+    (settings?.longBreakMinutes ?? DEFAULT_LONG_BREAK_MINUTES) * 60 * 1000;
+  const totalMs =
+    state.phase === "focus" ? focusMs : state.phase === "longBreak" ? longBreakMs : breakMs;
+  const ringProgress = totalMs > 0 ? (totalMs - remainingMs) / totalMs : 0;
+  const ringRadius = 70;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference * (1 - Math.min(1, Math.max(0, ringProgress)));
+  const phaseToneClass =
+    state.phase === "focus"
+      ? "text-red-600 dark:text-red-400"
+      : "text-green-600 dark:text-green-400";
+  const ringStrokeClass =
+    state.phase === "focus"
+      ? "stroke-red-500 dark:stroke-red-400"
+      : "stroke-green-500 dark:stroke-green-400";
   const phaseLabel =
     state.phase === "focus"
       ? "Focus"
@@ -196,18 +220,34 @@ export default function Popup() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto w-[400px] max-w-[420px] px-5 py-6">
-        <header className="mb-5 flex items-start justify-between gap-3">
+      <div
+        className={`mx-auto ${
+          isCompact
+            ? "w-[320px] max-w-[340px] px-4 py-4"
+            : "w-[400px] max-w-[420px] px-5 py-6"
+        }`}
+      >
+        <header
+          className={`flex items-start justify-between gap-3 ${
+            isCompact ? "mb-4" : "mb-5"
+          }`}
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
               Pomodoro
             </p>
-            <h1 className="mt-1 text-xl font-semibold tracking-tight">
+            <h1
+              className={`mt-1 font-semibold tracking-tight ${
+                isCompact ? "text-lg" : "text-xl"
+              }`}
+            >
               {phaseLabel} Session
             </h1>
           </div>
           <button
-            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100"
+            className={`rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100 ${
+              isCompact ? "text-[10px]" : "text-xs"
+            }`}
             onClick={() => chrome.runtime.openOptionsPage()}
             type="button"
           >
@@ -215,27 +255,76 @@ export default function Popup() {
           </button>
         </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <section
+          className={`rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 ${
+            isCompact ? "p-3" : "p-4"
+          }`}
+        >
           <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
             <span>Status</span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
               {state.status}
             </span>
           </div>
-          <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-4xl font-semibold tabular-nums text-slate-900 dark:text-slate-100">
-              {display}
-            </span>
-            <span
-              className={`text-sm font-medium uppercase tracking-[0.2em] ${
-                state.phase === "focus"
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-green-600 dark:text-green-400"
-              }`}
-            >
-              {phaseLabel}
-            </span>
-          </div>
+          {timerDisplayMode === "ring" ? (
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div
+                className={`relative flex items-center justify-center ${
+                  isCompact ? "h-36 w-36" : "h-48 w-48"
+                }`}
+              >
+                <svg className="h-full w-full" viewBox="0 0 160 160">
+                  <circle
+                    className="stroke-slate-200 dark:stroke-slate-700"
+                    cx="80"
+                    cy="80"
+                    fill="none"
+                    r={ringRadius}
+                    strokeWidth="10"
+                  />
+                  <circle
+                    className={`transition-[stroke-dashoffset] duration-500 ${ringStrokeClass}`}
+                    cx="80"
+                    cy="80"
+                    fill="none"
+                    r={ringRadius}
+                    strokeDasharray={ringCircumference}
+                    strokeDashoffset={ringOffset}
+                    strokeLinecap="round"
+                    strokeWidth="10"
+                    transform="rotate(-90 80 80)"
+                  />
+                </svg>
+                <span
+                  className={`absolute text-center font-semibold tabular-nums text-slate-900 dark:text-slate-100 ${
+                    isCompact ? "text-2xl" : "text-3xl"
+                  }`}
+                >
+                  {display}
+                </span>
+              </div>
+              <span
+                className={`text-sm font-medium uppercase tracking-[0.2em] ${phaseToneClass}`}
+              >
+                {phaseLabel}
+              </span>
+            </div>
+          ) : (
+            <div className="mt-4 flex items-baseline justify-between">
+              <span
+                className={`font-semibold tabular-nums text-slate-900 dark:text-slate-100 ${
+                  isCompact ? "text-3xl" : "text-4xl"
+                }`}
+              >
+                {display}
+              </span>
+              <span
+                className={`text-sm font-medium uppercase tracking-[0.2em] ${phaseToneClass}`}
+              >
+                {phaseLabel}
+              </span>
+            </div>
+          )}
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
             <div className="flex items-center justify-between">
               <span>Cycle</span>
@@ -249,24 +338,36 @@ export default function Popup() {
                 style={{ width: `${cyclePercent}%` }}
               />
             </div>
+            <div className="mt-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+              <span>Total cycles</span>
+              <span className="text-slate-700 dark:text-slate-100">
+                {state.totalCycles ?? 0}
+              </span>
+            </div>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2">
             <button
-              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+              className={`rounded-md bg-slate-900 px-3 py-2 font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 ${
+                isCompact ? "text-xs" : "text-sm"
+              }`}
               onClick={isRunning ? pause : start}
               type="button"
             >
               {isRunning ? "Pause" : "Start"}
             </button>
             <button
-              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:border-red-300 hover:bg-red-100 dark:border-red-500/40 dark:bg-red-950 dark:text-red-200 dark:hover:border-red-400 dark:hover:bg-red-900/60"
+              className={`rounded-md border border-red-200 bg-red-50 px-3 py-2 font-medium text-red-700 transition hover:border-red-300 hover:bg-red-100 dark:border-red-500/40 dark:bg-red-950 dark:text-red-200 dark:hover:border-red-400 dark:hover:bg-red-900/60 ${
+                isCompact ? "text-xs" : "text-sm"
+              }`}
               onClick={skip}
               type="button"
             >
               Skip
             </button>
             <button
-              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+              className={`rounded-md border border-slate-200 bg-white px-3 py-2 font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800 ${
+                isCompact ? "text-xs" : "text-sm"
+              }`}
               onClick={reset}
               type="button"
             >

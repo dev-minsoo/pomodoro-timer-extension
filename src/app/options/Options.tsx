@@ -16,6 +16,8 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
   soundRepeatCount: 1,
   openOptionsOnComplete: false,
   badgeEnabled: true,
+  compactMode: false,
+  timerDisplayMode: "text",
 };
 
 function isPomodoroTheme(value: unknown): value is PomodoroTheme {
@@ -370,6 +372,63 @@ export default function Options() {
                       updateSettings({ badgeEnabled: event.target.checked })
                     }
                   />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-base font-semibold">Interface</h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Adjust the popup layout and timer presentation.
+              </p>
+              <div className="mt-4 grid gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm dark:border-slate-800">
+                  <span>
+                    <span className="block font-medium">Compact mode</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Shrink padding and type for tighter windows.
+                    </span>
+                  </span>
+                  <input
+                    checked={settings.compactMode ?? false}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+                    type="checkbox"
+                    onChange={(event) =>
+                      updateSettings({ compactMode: event.target.checked })
+                    }
+                  />
+                </div>
+                <div className="rounded-xl border border-slate-200 px-4 py-3 text-sm dark:border-slate-800">
+                  <span className="block font-medium">Timer display</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Choose between the classic timer or the focus ring.
+                  </span>
+                  <div className="mt-3 flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <input
+                        checked={settings.timerDisplayMode === "text"}
+                        className="h-4 w-4 rounded-full border-slate-300 text-slate-900 focus:ring-slate-500"
+                        name="timerDisplayMode"
+                        type="radio"
+                        onChange={() =>
+                          updateSettings({ timerDisplayMode: "text" })
+                        }
+                      />
+                      Text
+                    </label>
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <input
+                        checked={settings.timerDisplayMode === "ring"}
+                        className="h-4 w-4 rounded-full border-slate-300 text-slate-900 focus:ring-slate-500"
+                        name="timerDisplayMode"
+                        type="radio"
+                        onChange={() =>
+                          updateSettings({ timerDisplayMode: "ring" })
+                        }
+                      />
+                      Ring
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
