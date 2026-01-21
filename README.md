@@ -1,110 +1,117 @@
-# React + TypeScript + Tailwind + Vite — Chrome Extension (MV3) Boilerplate
+# Pomodoro Timer (Chrome Extension)
 
-## Overview
-Fork-and-go Chrome Extension boilerplate built with React, TypeScript, Tailwind CSS, and Vite. It targets Manifest V3 and includes common extension surfaces out of the box: Popup, Side Panel, Options, and DevTools, plus background and content scripts.
+Simple Pomodoro timer built with React, TypeScript, Tailwind CSS, and Vite. The timer state is managed by an MV3 **service worker** and the Popup/Options UIs communicate with it via runtime messages.
+
+---
 
 ## Features
-- MV3 service worker background
-- React + TypeScript UI surfaces
-- Tailwind CSS styling
-- Vite-based multi-entry build with HTML relocation
-- Ready-to-use Popup, Side Panel, Options, and DevTools pages
-- Background and Content script templates
 
-## Supported Extension Components
-- Popup
-- Side Panel
-- Options Page
-- DevTools Panel (via devtools-page loader)
-- Background Service Worker
-- Content Script
+### Popup
+- **Timer controls**: Start / Pause / Reset / Skip
+- **Phases**: Focus / Break / **Long Break**
+- **Display modes**: Text timer or **ring progress**
+- **Compact mode** for tighter popup sizing
+- **Cycle info**
+  - Total completed Pomodoros
+  - “Until long break” progress when long breaks are enabled
 
-## Directory Structure
-```txt
-.
-├─ manifest.json
-├─ public/
-│  └─ icons/
-└─ src/
-   ├─ app/
-   │  ├─ popup/
-   │  ├─ sidepanel/
-   │  ├─ options/
-   │  ├─ devtools/
-   │  └─ devtools-page/
-   ├─ scripts/
-   │  ├─ background/
-   │  └─ content/
-   └─ shared/
-      ├─ components/
-      ├─ hooks/
-      ├─ styles/
-      └─ utils/
-```
+### Options
+- **Session lengths**
+  - Focus minutes / Break minutes
+  - Long break minutes / Long break interval
+  - Enable/disable long breaks
+- **Automation**
+  - Auto switch sessions
+- **Alerts**
+  - Notifications (with preview)
+  - Sound alerts: enable/disable, sound type (beep/bell/chime/soft/tick), repeat count, preview
+- **Badge**
+  - Show countdown on the extension icon
+- **Theme**
+  - Light / Dark
 
-## Scripts
-- `npm run dev`: start Vite dev server
-- `npm run build`: type-check + build + copy manifest into dist
-- `npm run copy-manifest`: copy `manifest.json` to `dist/manifest.json`
-- `npm run lint`: run ESLint
-- `npm run preview`: preview production build
+---
 
-## Build Pipeline Notes
-- `vite-plugin-chrome-extension.ts` moves generated HTML files to `dist/` root.
-- `manifest.json` remains in repo root and is copied into `dist/` by `copy-manifest`.
+## Quick Start
 
-## Getting Started
+1. Click the extension icon and press **Start** in the popup.
+2. Open **Settings (⚙)** to configure durations, alerts, and display mode.
+3. When a session ends, notifications/sounds are triggered based on your settings and the timer switches automatically if enabled.
 
-### Install
+---
+
+## Architecture (High-level)
+
+- **Popup UI**: `src/app/popup/` — Timer UI and controls
+- **Options UI**: `src/app/options/` — Settings page and previews
+- **Background (MV3 Service Worker)**: `src/scripts/background/index.ts` — Single source of truth for timer state, alarms, notifications, badge
+- **Offscreen Document**: `src/app/offscreen/` — Plays audio via AudioContext (MV3 limitation workaround)
+- **Content Script**: `src/scripts/content/index.ts` — Minimal script
+
+### Storage
+- State: `pomodoroState`
+- Settings: `pomodoroSettings`
+
+### Alarms
+- `pomodoro-end` (session end)
+- `pomodoro-tick` (badge updates)
+
+### Messaging (core)
+Popup/Options → Background:
+- `POMODORO_GET_STATE`
+- `POMODORO_START` / `POMODORO_PAUSE` / `POMODORO_RESET` / `POMODORO_SKIP`
+
+Options → Background (previews):
+- `POMODORO_SETTINGS_UPDATED`
+- `POMODORO_PREVIEW_SOUND`
+- `POMODORO_PREVIEW_NOTIFICATION`
+
+Background → Offscreen:
+- `POMODORO_PLAY_SOUND`
+
+---
+
+## Development
+
 ```bash
 npm install
 ```
 
-### Develop
 ```bash
-npm run dev
-```
-
-### Build
-```bash
-npm run build
+npm run dev      # Vite dev server
+npm run build    # Type-check + build + copy manifest to dist/
+npm run lint     # ESLint
 ```
 
 The production build outputs to `dist/`.
 
+---
+
 ## Load Unpacked (Chrome)
+
 1. Build the extension:
    ```bash
    npm run build
    ```
-2. Open Chrome and go to Extensions.
-3. Enable Developer mode.
-4. Click Load unpacked.
+2. Open `chrome://extensions`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked**.
 5. Select the `dist/` folder.
 
-## Where to Edit
-- Popup UI: `src/app/popup/`
-- Side Panel UI: `src/app/sidepanel/`
-- Options UI: `src/app/options/`
-- DevTools UI: `src/app/devtools/`
-- DevTools loader: `src/app/devtools-page/`
-- Background (service worker): `src/scripts/background/`
-- Content script: `src/scripts/content/`
-- Shared styles/components/utils: `src/shared/`
+---
 
-## Permissions
-The default manifest includes:
-- `tabs`, `storage`, `sidePanel`
-- `host_permissions` for `<all_urls>`
-- A content script that runs on all pages
+## Project Structure (Summary)
 
-Update `manifest.json` to reduce permissions and narrow host matching for your use case.
-
-## Customization
-- Update `manifest.json` (name, description, version, permissions, entry points).
-- Replace icons under `public/icons/` and reference them in the manifest.
-- Remove any surface you don’t need (and delete the manifest entry).
-
-## Notes
-- Popup, Side Panel, Options, and DevTools are separate React entry points.
-- Background and Content scripts are built as standalone MV3 scripts.
+```txt
+manifest.json
+src/
+  app/
+    popup/       # Popup UI
+    options/     # Options UI
+    offscreen/   # Audio playback
+  scripts/
+    background/  # MV3 service worker
+    content/     # Content script
+  shared/
+    utils/       # Pomodoro types and helpers
+```

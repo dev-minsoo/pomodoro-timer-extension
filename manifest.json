@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Focus Session",
-  "description": "A focus session built on the Pomodoro technique to help you stay immersed and productive.",
+  "name": "pomodoro_timer",
+  "description": "Pomodoro timer to help you stay focused and productive.",
   "version": "0.1.0",
   "action": {
-    "default_title": "Open Focus Session",
+    "default_title": "Open pomodoro_timer",
     "default_popup": "popup.html"
   },
   "icons": {
