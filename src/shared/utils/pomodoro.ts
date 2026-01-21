@@ -3,6 +3,7 @@ export type PomodoroStatus = "idle" | "running" | "paused";
 export type PomodoroTheme = "light" | "dark";
 
 export type PomodoroSoundType = "beep" | "bell" | "chime" | "soft" | "tick";
+export type PomodoroTimerDisplayMode = "text" | "ring";
 
 export interface PomodoroSettings {
   focusMinutes: number;
@@ -16,6 +17,8 @@ export interface PomodoroSettings {
   soundRepeatCount: number;
   openOptionsOnComplete: boolean;
   badgeEnabled: boolean;
+  compactMode: boolean;
+  timerDisplayMode: PomodoroTimerDisplayMode;
 }
 
 export interface PomodoroState {
@@ -24,6 +27,7 @@ export interface PomodoroState {
   remainingMs: number;
   endTime?: number;
   completedFocusSessions: number;
+  totalCycles: number;
 }
 
 export interface PomodoroStatePayload {
