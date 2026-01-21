@@ -20,13 +20,15 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
   breakMinutes: 5,
   longBreakMinutes: 15,
   longBreakInterval: 4,
+  longBreakEnabled: true,
   autoSwitch: true,
   notificationsEnabled: true,
   soundEnabled: false,
   soundType: "beep",
   soundRepeatCount: 1,
-  openOptionsOnComplete: false,
   badgeEnabled: true,
+  compactMode: false,
+  timerDisplayMode: "text",
 };
 
 const END_ALARM_NAME = "pomodoro-end";
@@ -66,6 +68,7 @@ function getDefaultState(settings: PomodoroSettings): PomodoroState {
     phase: "focus",
     remainingMs: getPhaseDurationMs(settings, "focus"),
     completedFocusSessions: 0,
+    totalCycles: 0,
   };
 }
 
@@ -92,6 +95,7 @@ async function loadStateAndSettings(): Promise<PomodoroStatePayload> {
     ? {
         ...storedState,
         completedFocusSessions: storedState.completedFocusSessions ?? 0,
+        totalCycles: storedState.totalCycles ?? 0,
       }
     : getDefaultState(settings);
 
@@ -176,10 +180,6 @@ async function showPhaseCompleteNotification(
     }
   }
 
-  if (settings.openOptionsOnComplete) {
-    chrome.runtime.openOptionsPage();
-  }
-
   if (!settings.notificationsEnabled && !forceNotify) {
     return;
   }
@@ -210,6 +210,9 @@ function getNextPhaseAndCount(
   { countCompleted }: { countCompleted: boolean }
 ): { nextPhase: "focus" | "break" | "longBreak"; nextCompletedFocusSessions: number } {
   if (phase === "focus") {
+    if (!settings.longBreakEnabled) {
+      return { nextPhase: "break", nextCompletedFocusSessions: 0 };
+    }
     const interval = Math.max(1, settings.longBreakInterval);
     const nextCount = countCompleted
       ? Math.min(interval, completedFocusSessions + 1)
@@ -238,6 +241,11 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
 
   await showPhaseCompleteNotification(currentState.phase, payload.settings);
 
+  const shouldCountCycle = currentState.phase === "focus";
+  const nextTotalCycles = shouldCountCycle
+    ? currentState.totalCycles + 1
+    : currentState.totalCycles;
+
   const { nextPhase, nextCompletedFocusSessions } = getNextPhaseAndCount(
     currentState.phase,
     payload.settings,
@@ -252,6 +260,7 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
       phase: resolvedNextPhase,
       remainingMs: getPhaseDurationMs(payload.settings, resolvedNextPhase),
       completedFocusSessions: nextCompletedFocusSessions,
+      totalCycles: nextTotalCycles,
     };
 
     await clearAlarms();
@@ -269,6 +278,7 @@ async function handlePhaseComplete(): Promise<PomodoroStatePayload> {
     remainingMs,
     endTime,
     completedFocusSessions: nextCompletedFocusSessions,
+    totalCycles: nextTotalCycles,
   };
 
   await saveStateAndSettings({ ...payload, state: nextState });
@@ -297,6 +307,7 @@ async function startPomodoro(): Promise<PomodoroStatePayload> {
     remainingMs,
     endTime,
     completedFocusSessions: currentState.completedFocusSessions,
+    totalCycles: currentState.totalCycles,
   };
 
   await saveStateAndSettings({ ...payload, state: nextState });
@@ -357,6 +368,7 @@ async function skipPomodoro(): Promise<PomodoroStatePayload> {
     remainingMs,
     endTime,
     completedFocusSessions: nextCompletedFocusSessions,
+    totalCycles: currentState.totalCycles,
   };
 
   await clearAlarms();
