@@ -222,13 +222,13 @@ export default function Popup() {
 
   return (
     <div
-      className={`${isTightSpacing ? "min-h-0" : "min-h-screen"} bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100`}
+      className={`${isTightSpacing ? "min-h-0 h-auto" : "min-h-screen"} bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100`}
     >
       <div
         className={`mx-auto ${
           isCompact
-            ? `w-[320px] max-w-[340px] px-4 ${isTightSpacing ? "py-3" : "py-4"}`
-            : `w-[400px] max-w-[420px] px-5 ${isTightSpacing ? "py-5" : "py-6"}`
+            ? `w-[320px] max-w-[340px] px-4 ${isTightSpacing ? "py-2" : "py-4"}`
+            : `w-[400px] max-w-[420px] px-5 ${isTightSpacing ? "py-4" : "py-6"}`
         }`}
       >
         <header
@@ -270,14 +270,26 @@ export default function Popup() {
             isCompact ? "p-3" : "p-4"
           }`}
         >
-          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-2">
+          <div
+            className={`flex items-center justify-between font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 ${
+              isCompact ? "flex-nowrap gap-2 text-[11px]" : "text-xs"
+            }`}
+          >
+            <span
+              className={`flex items-center whitespace-nowrap ${
+                isCompact ? "gap-1.5" : "gap-2"
+              }`}
+            >
               <span>Status</span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+              <span
+                className={`font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ${
+                  isCompact ? "text-[9px]" : "text-[10px]"
+                }`}
+              >
                 ({state.totalCycles ?? 0} Pomodoros)
               </span>
             </span>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <span className="whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
               {state.status}
             </span>
           </div>
