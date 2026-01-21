@@ -26,7 +26,6 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
   soundEnabled: false,
   soundType: "beep",
   soundRepeatCount: 1,
-  openOptionsOnComplete: false,
   badgeEnabled: true,
   compactMode: false,
   timerDisplayMode: "text",
@@ -179,10 +178,6 @@ async function showPhaseCompleteNotification(
     } catch (error) {
       console.warn("Failed to play sound", error);
     }
-  }
-
-  if (settings.openOptionsOnComplete) {
-    chrome.runtime.openOptionsPage();
   }
 
   if (!settings.notificationsEnabled && !forceNotify) {

@@ -16,7 +16,6 @@ export interface PomodoroSettings {
   soundEnabled: boolean;
   soundType: PomodoroSoundType;
   soundRepeatCount: number;
-  openOptionsOnComplete: boolean;
   badgeEnabled: boolean;
   compactMode: boolean;
   timerDisplayMode: PomodoroTimerDisplayMode;
