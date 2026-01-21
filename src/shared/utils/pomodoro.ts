@@ -10,6 +10,7 @@ export interface PomodoroSettings {
   breakMinutes: number;
   longBreakMinutes: number;
   longBreakInterval: number;
+  longBreakEnabled: boolean;
   autoSwitch: boolean;
   notificationsEnabled: boolean;
   soundEnabled: boolean;

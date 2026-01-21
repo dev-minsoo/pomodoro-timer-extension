@@ -185,6 +185,8 @@ export default function Popup() {
   const isRunning = state.status === "running";
   const isCompact = settings?.compactMode ?? false;
   const timerDisplayMode = settings?.timerDisplayMode ?? "text";
+  const longBreakEnabled = settings?.longBreakEnabled ?? true;
+  const isTightSpacing = !longBreakEnabled && timerDisplayMode === "text";
   const rawLongBreakInterval = settings?.longBreakInterval ?? 4;
   const longBreakInterval = rawLongBreakInterval > 0 ? rawLongBreakInterval : 1;
   const cycleProgress = Math.min(
@@ -219,39 +221,47 @@ export default function Popup() {
         : "Break";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
+    <div
+      className={`${isTightSpacing ? "min-h-0" : "min-h-screen"} bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100`}
+    >
       <div
         className={`mx-auto ${
           isCompact
-            ? "w-[320px] max-w-[340px] px-4 py-4"
-            : "w-[400px] max-w-[420px] px-5 py-6"
+            ? `w-[320px] max-w-[340px] px-4 ${isTightSpacing ? "py-3" : "py-4"}`
+            : `w-[400px] max-w-[420px] px-5 ${isTightSpacing ? "py-5" : "py-6"}`
         }`}
       >
         <header
-          className={`flex items-start justify-between gap-3 ${
+          className={`flex items-center justify-between gap-3 ${
             isCompact ? "mb-4" : "mb-5"
           }`}
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            <p className="text-base font-semibold uppercase leading-none tracking-[0.18em] text-slate-500 dark:text-slate-400">
               Pomodoro
             </p>
-            <h1
-              className={`mt-1 font-semibold tracking-tight ${
-                isCompact ? "text-lg" : "text-xl"
-              }`}
-            >
-              {phaseLabel} Session
-            </h1>
           </div>
           <button
-            className={`rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100 ${
-              isCompact ? "text-[10px]" : "text-xs"
+            aria-label="Open settings"
+            className={`rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100 ${
+              isCompact ? "p-1.5" : "p-2"
             }`}
             onClick={() => chrome.runtime.openOptionsPage()}
             type="button"
           >
-            Settings
+            <svg
+              aria-hidden="true"
+              className={isCompact ? "h-4 w-4" : "h-5 w-5"}
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.73v.5a2 2 0 0 1-1 1.73l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.73v-.5a2 2 0 0 1 1-1.73l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
           </button>
         </header>
 
@@ -261,7 +271,12 @@ export default function Popup() {
           }`}
         >
           <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            <span>Status</span>
+            <span className="flex items-center gap-2">
+              <span>Status</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                ({state.totalCycles ?? 0} Pomodoros)
+              </span>
+            </span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
               {state.status}
             </span>
@@ -325,27 +340,27 @@ export default function Popup() {
               </span>
             </div>
           )}
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            <div className="flex items-center justify-between">
-              <span>Cycle</span>
-              <span className="text-slate-700 dark:text-slate-100">
-                {cycleProgress}/{longBreakInterval}
-              </span>
+          {longBreakEnabled && (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <div className="flex items-center justify-between">
+                <span>Until long break</span>
+                <span className="text-slate-700 dark:text-slate-100">
+                  {cycleProgress}/{longBreakInterval}
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div
+                  className="h-full rounded-full bg-red-500 transition-[width] duration-300 dark:bg-red-400"
+                  style={{ width: `${cyclePercent}%` }}
+                />
+              </div>
             </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-              <div
-                className="h-full rounded-full bg-red-500 transition-[width] duration-300 dark:bg-red-400"
-                style={{ width: `${cyclePercent}%` }}
-              />
-            </div>
-            <div className="mt-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-              <span>Total cycles</span>
-              <span className="text-slate-700 dark:text-slate-100">
-                {state.totalCycles ?? 0}
-              </span>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          )}
+          <div
+            className={`grid grid-cols-3 gap-2 ${
+              isTightSpacing ? "mt-3" : "mt-4"
+            }`}
+          >
             <button
               className={`rounded-md bg-slate-900 px-3 py-2 font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 ${
                 isCompact ? "text-xs" : "text-sm"

@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: PomodoroSettings = {
   breakMinutes: 5,
   longBreakMinutes: 15,
   longBreakInterval: 4,
+  longBreakEnabled: true,
   autoSwitch: true,
   notificationsEnabled: true,
   soundEnabled: false,
@@ -214,6 +215,9 @@ function getNextPhaseAndCount(
   { countCompleted }: { countCompleted: boolean }
 ): { nextPhase: "focus" | "break" | "longBreak"; nextCompletedFocusSessions: number } {
   if (phase === "focus") {
+    if (!settings.longBreakEnabled) {
+      return { nextPhase: "break", nextCompletedFocusSessions: 0 };
+    }
     const interval = Math.max(1, settings.longBreakInterval);
     const nextCount = countCompleted
       ? Math.min(interval, completedFocusSessions + 1)
