@@ -1,117 +1,119 @@
-# Pomodoro Timer (Chrome Extension)
+# Pomodoro Timer Extension (Chrome MV3)
 
-Simple Pomodoro timer built with React, TypeScript, Tailwind CSS, and Vite. The timer state is managed by an MV3 **service worker** and the Popup/Options UIs communicate with it via runtime messages.
+A Pomodoro timer Chrome extension built with React, TypeScript, and Vite.  
+The main goal is to provide a **reliable timer that continues when the popup closes**, with full session flow support (notifications, sound, and badge updates).
 
----
+## What This Repository Contains
 
-## Features
+- MV3 service-worker-centric timer state management
+- Separate Popup and Options UIs
+- Session completion handling using `chrome.alarms`, `chrome.notifications`, and `chrome.offscreen`
+- State/settings recovery with `chrome.storage.local`
 
-### Popup
-- **Timer controls**: Start / Pause / Reset / Skip
-- **Phases**: Focus / Break / **Long Break**
-- **Display modes**: Text timer or **ring progress**
-- **Compact mode** for tighter popup sizing
-- **Cycle info**
-  - Total completed Pomodoros
-  - “Until long break” progress when long breaks are enabled
+## Core Features
 
-### Options
-- **Session lengths**
-  - Focus minutes / Break minutes
-  - Long break minutes / Long break interval
-  - Enable/disable long breaks
-- **Automation**
-  - Auto switch sessions
-- **Alerts**
-  - Notifications (with preview)
-  - Sound alerts: enable/disable, sound type (beep/bell/chime/soft/tick), repeat count, preview
-- **Badge**
-  - Show countdown on the extension icon
-- **Theme**
-  - Light / Dark
+- Session types: Focus / Break / Long Break
+- Controls: Start / Pause / Reset / Skip
+- Auto switch option to start the next session automatically
+- Options page:
+  - Focus/break/long-break duration, long-break interval, long-break enable toggle
+  - Notification toggle + preview
+  - Sound toggle + sound type + repeat count + preview
+  - Badge countdown toggle
+  - Popup display mode (Text/Ring), Compact mode
+  - Theme (Light/Dark)
+- Popup UI:
+  - Text timer or ring-progress timer
+  - Current status/session display
+  - Progress-until-long-break indicator
 
----
+## Runtime Architecture
 
-## Quick Start
+```txt
+Popup UI  ─┐
+           ├─ runtime message ─> Background Service Worker
+Options UI ─┘                         ├─ chrome.storage.local (state/settings)
+                                      ├─ chrome.alarms (end/tick)
+                                      ├─ chrome.notifications
+                                      ├─ chrome.action badge
+                                      └─ Offscreen Document (audio playback)
+```
 
-1. Click the extension icon and press **Start** in the popup.
-2. Open **Settings (⚙)** to configure durations, alerts, and display mode.
-3. When a session ends, notifications/sounds are triggered based on your settings and the timer switches automatically if enabled.
+### Component Responsibilities
 
----
+- `src/scripts/background/index.ts`
+  - Single source of truth for timer state
+  - Session transition rules (including long breaks), alarm scheduling, notification/sound trigger, badge updates
+- `src/app/popup/Popup.tsx`
+  - Timer rendering and controls
+  - 1-second local countdown + 5-second state synchronization
+- `src/app/options/Options.tsx`
+  - Settings edit and save
+  - Notification/sound preview requests
+- `src/app/offscreen/main.ts`
+  - AudioContext-based sound playback (MV3 offscreen workaround)
 
-## Architecture (High-level)
+## Data Model
 
-- **Popup UI**: `src/app/popup/` — Timer UI and controls
-- **Options UI**: `src/app/options/` — Settings page and previews
-- **Background (MV3 Service Worker)**: `src/scripts/background/index.ts` — Single source of truth for timer state, alarms, notifications, badge
-- **Offscreen Document**: `src/app/offscreen/` — Plays audio via AudioContext (MV3 limitation workaround)
-- **Content Script**: `src/scripts/content/index.ts` — Minimal script
+- `pomodoroState`
+  - `status`, `phase`, `remainingMs`, `endTime`, `completedFocusSessions`, `totalCycles`
+- `pomodoroSettings`
+  - Session durations, auto-switch, notification/sound, badge, UI display options
 
-### Storage
-- State: `pomodoroState`
-- Settings: `pomodoroSettings`
+## Message Contracts (Main)
 
-### Alarms
-- `pomodoro-end` (session end)
-- `pomodoro-tick` (badge updates)
+- Popup/Options -> Background
+  - `POMODORO_GET_STATE`
+  - `POMODORO_START`
+  - `POMODORO_PAUSE`
+  - `POMODORO_RESET`
+  - `POMODORO_SKIP`
+  - `POMODORO_SETTINGS_UPDATED`
+  - `POMODORO_PREVIEW_SOUND`
+  - `POMODORO_PREVIEW_NOTIFICATION`
+- Background -> Offscreen
+  - `POMODORO_PLAY_SOUND`
 
-### Messaging (core)
-Popup/Options → Background:
-- `POMODORO_GET_STATE`
-- `POMODORO_START` / `POMODORO_PAUSE` / `POMODORO_RESET` / `POMODORO_SKIP`
+## Chrome Permissions Used
 
-Options → Background (previews):
-- `POMODORO_SETTINGS_UPDATED`
-- `POMODORO_PREVIEW_SOUND`
-- `POMODORO_PREVIEW_NOTIFICATION`
-
-Background → Offscreen:
-- `POMODORO_PLAY_SOUND`
-
----
+- `storage`: store state/settings
+- `alarms`: session-end and periodic tick handling
+- `notifications`: session completion alerts
+- `offscreen`: background audio playback
+- `tabs`, `host_permissions(<all_urls>)`, `content_scripts`
+  - Currently includes baseline content-script messaging; not central to Pomodoro logic
 
 ## Development
 
 ```bash
 npm install
+npm run dev
+npm run build
+npm run lint
 ```
 
-```bash
-npm run dev      # Vite dev server
-npm run build    # Type-check + build + copy manifest to dist/
-npm run lint     # ESLint
-```
+- Build output: `dist/`
 
-The production build outputs to `dist/`.
+## Load Unpacked Extension
 
----
+1. `npm run build`
+2. Go to `chrome://extensions`
+3. Enable Developer mode
+4. Click Load unpacked
+5. Select the `dist/` folder
 
-## Load Unpacked (Chrome)
-
-1. Build the extension:
-   ```bash
-   npm run build
-   ```
-2. Open `chrome://extensions`.
-3. Enable **Developer mode**.
-4. Click **Load unpacked**.
-5. Select the `dist/` folder.
-
----
-
-## Project Structure (Summary)
+## Project Structure
 
 ```txt
 manifest.json
 src/
   app/
     popup/       # Popup UI
-    options/     # Options UI
-    offscreen/   # Audio playback
+    options/     # Settings UI
+    offscreen/   # Audio playback runtime
   scripts/
-    background/  # MV3 service worker
-    content/     # Content script
+    background/  # MV3 service worker (timer state machine)
+    content/     # Minimal content script
   shared/
-    utils/       # Pomodoro types and helpers
+    utils/       # Types and shared helpers
 ```
