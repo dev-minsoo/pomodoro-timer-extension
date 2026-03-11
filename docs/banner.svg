@@ -1,0 +1,31 @@
+<svg width="1400" height="420" viewBox="0 0 1400 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Pomodoro Timer Extension banner</title>
+  <desc id="desc">Reliable MV3 timer with alarms, badge, sound, and recovery</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1C1917"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="128" y1="108" x2="540" y2="312" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FB7185"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="420" fill="url(#bg)"/>
+  <circle cx="300" cy="210" r="122" fill="#111827" stroke="#374151" stroke-width="16"/>
+  <circle cx="300" cy="210" r="92" stroke="url(#ring)" stroke-width="22"/>
+  <circle cx="300" cy="210" r="62" fill="#0B0F1A"/>
+  <path d="M300 158V214L342 240" stroke="#FFF7ED" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="492" y="84" width="248" height="236" rx="28" fill="#111827" stroke="#374151"/>
+  <rect x="520" y="116" width="140" height="18" rx="9" fill="#FFF7ED"/>
+  <rect x="520" y="154" width="188" height="16" rx="8" fill="#9CA3AF"/>
+  <rect x="520" y="194" width="190" height="48" rx="18" fill="#1F2937" stroke="#FB7185"/>
+  <text x="550" y="224" fill="#FFF7ED" font-family="Arial, sans-serif" font-size="22" font-weight="700">25:00</text>
+  <rect x="520" y="258" width="76" height="34" rx="17" fill="#FB7185"/>
+  <rect x="606" y="258" width="76" height="34" rx="17" fill="#1F2937"/>
+  <text x="804" y="144" fill="#FFF7ED" font-family="Arial, sans-serif" font-size="58" font-weight="700">Pomodoro Timer</text>
+  <text x="806" y="184" fill="#D1D5DB" font-family="Arial, sans-serif" font-size="22">MV3 timer built around background state, alarms, sound, and recovery</text>
+  <rect x="806" y="230" width="248" height="42" rx="21" fill="#111827" stroke="#4B5563"/>
+  <text x="832" y="257" fill="#FDBA74" font-family="Menlo, monospace" font-size="17">npm install && npm run build</text>
+  <text x="806" y="314" fill="#9CA3AF" font-family="Arial, sans-serif" font-size="18">Service Worker  •  chrome.alarms  •  Offscreen Audio</text>
+</svg>

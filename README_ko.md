@@ -1,106 +1,82 @@
-# 포모도로 타이머 확장 (Chrome MV3)
+<p align="center">
+  <img src="docs/banner.svg" alt="포모도로 타이머 확장 배너" width="100%" />
+</p>
 
-React + TypeScript + Vite 기반의 포모도로 타이머 크롬 확장입니다.  
-핵심 목적은 **팝업이 닫혀도 타이머 상태를 안정적으로 유지**하고, 알림/사운드/배지까지 포함한 **실사용 가능한 집중 사이클**을 제공하는 것입니다.
+<h1 align="center">Pomodoro Timer Extension</h1>
 
-## 이 저장소가 제공하는 것
+<p align="center">
+  팝업이 닫혀도 상태가 유지되도록 설계한 Chrome MV3 포모도로 타이머 확장입니다.
+</p>
 
-- MV3 서비스 워커 중심 타이머 상태 관리
-- Popup/Options UI 분리 구조
-- `chrome.alarms`, `chrome.notifications`, `chrome.offscreen` 기반 완료 이벤트 처리
-- `chrome.storage.local` 기반 상태/설정 복구
+<p align="center">
+  <a href="#설치"><img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827"></a>
+  <a href="#설치"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white"></a>
+  <a href="#설치"><img alt="Chrome MV3" src="https://img.shields.io/badge/Chrome-MV3-4285F4?logo=googlechrome&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <code>npm install && npm run build</code>
+</p>
+
+이 확장은 타이머 상태를 백그라운드 서비스 워커에 두고, 알람, 알림, 사운드, 배지 갱신을 그 런타임 기준으로 맞춰 MV3 환경에서도 안정적인 포모도로 경험을 제공하는 데 집중합니다.
+
+## 한눈에 보기
+
+- 백그라운드 서비스 워커가 타이머 상태와 세션 전환을 관리
+- Popup, Options, Offscreen 런타임을 역할별로 분리
+- MV3 제약 안에서도 알림, 사운드, 배지 카운트다운을 안정적으로 처리
+
+## 왜 이 확장인가
+
+- MV3에서는 팝업 기반 타이머가 쉽게 끊깁니다
+- 이 프로젝트는 상태 복구와 지속성을 핵심 요구사항으로 다룹니다
+- 단순 데모가 아니라 실제 사용 가능한 타이머 확장을 목표로 합니다
 
 ## 핵심 기능
 
-- 세션: Focus / Break / Long Break
-- 제어: Start / Pause / Reset / Skip
-- 자동 전환: 세션 종료 후 다음 세션 자동 시작 옵션
-- 옵션 페이지:
-  - 집중/휴식/긴휴식 시간, 긴휴식 간격, 긴휴식 사용 여부
-  - 알림 on/off + 알림 미리보기
-  - 사운드 on/off + 사운드 타입 + 반복 횟수 + 미리보기
-  - 배지 카운트다운 on/off
-  - 팝업 표시 모드(Text/Ring), Compact mode
-  - 테마(Light/Dark)
-- 팝업 UI:
-  - 텍스트/링 타이머 표시
-  - 현재 상태/세션 표시
-  - 긴휴식까지 진행도 표시
+- Focus / Break / Long Break 세션
+- Start / Pause / Reset / Skip 제어
+- 세션 자동 전환
+- 알림 / 사운드 설정 및 미리보기
+- 배지 카운트다운 토글
+- 텍스트 / 링 표시 모드
+- Compact mode 및 라이트 / 다크 테마
 
-## 런타임 아키텍처
+## 설치
 
-```txt
-Popup UI  ─┐
-           ├─ runtime message ─> Background Service Worker
-Options UI ─┘                         ├─ chrome.storage.local (상태/설정)
-                                      ├─ chrome.alarms (종료/tick)
-                                      ├─ chrome.notifications
-                                      ├─ chrome.action badge
-                                      └─ Offscreen Document (오디오 재생)
-```
+### 요구사항
 
-### 구성 요소 역할
+- Node.js 18+
+- 개발자 모드가 가능한 Chrome 또는 Chromium 기반 브라우저
 
-- `src/scripts/background/index.ts`
-  - 타이머 상태 단일 소스(SSOT)
-  - 세션 전환 규칙, 알람 스케줄링, 알림/사운드 트리거, 배지 갱신
-- `src/app/popup/Popup.tsx`
-  - 타이머 렌더링/제어 UI
-  - 1초 단위 로컬 카운트다운 + 5초 주기 상태 동기화
-- `src/app/options/Options.tsx`
-  - 설정 편집/저장
-  - 알림/사운드 미리보기 요청
-- `src/app/offscreen/main.ts`
-  - AudioContext 기반 사운드 재생(MV3 제약 대응)
-
-## 데이터 모델
-
-- `pomodoroState`
-  - `status`, `phase`, `remainingMs`, `endTime`, `completedFocusSessions`, `totalCycles`
-- `pomodoroSettings`
-  - 세션 시간, 자동 전환, 알림/사운드, 배지, UI 표시 설정
-
-## 주요 메시지 계약
-
-- Popup/Options -> Background
-  - `POMODORO_GET_STATE`
-  - `POMODORO_START`
-  - `POMODORO_PAUSE`
-  - `POMODORO_RESET`
-  - `POMODORO_SKIP`
-  - `POMODORO_SETTINGS_UPDATED`
-  - `POMODORO_PREVIEW_SOUND`
-  - `POMODORO_PREVIEW_NOTIFICATION`
-- Background -> Offscreen
-  - `POMODORO_PLAY_SOUND`
-
-## 사용하는 Chrome 권한
-
-- `storage`: 상태/설정 저장
-- `alarms`: 세션 종료 및 분 단위 처리
-- `notifications`: 세션 완료 알림
-- `offscreen`: 백그라운드 오디오 재생
-- `tabs`, `host_permissions(<all_urls>)`, `content_scripts`
-  - 현재는 기본 콘텐츠 스크립트 통신 코드 포함(포모도로 핵심 기능에서 비중 낮음)
-
-## 개발
+### 개발 모드
 
 ```bash
 npm install
 npm run dev
-npm run build
-npm run lint
 ```
 
-- 빌드 결과물: `dist/`
+### 프로덕션 빌드
 
-## 크롬에 로드하기
+```bash
+npm run build
+```
 
-1. `npm run build`
-2. `chrome://extensions` 접속
-3. 개발자 모드 활성화
-4. 압축해제된 확장 프로그램 로드 클릭
-5. `dist/` 폴더 선택
+`chrome://extensions`에서 **압축해제된 확장 프로그램 로드**로 `dist/`를 선택하면 됩니다.
+
+## 사용법
+
+- 팝업에서 포커스 세션을 시작합니다
+- 세션 진행은 백그라운드 서비스 워커가 유지합니다
+- Options에서 시간, 사운드, 배지, 표시 방식을 조정합니다
+- 실제 사용 전에 알림과 사운드를 미리보기로 확인합니다
+
+## 런타임 구조
+
+```txt
+Popup UI  -> Background Service Worker -> storage / alarms / notifications / badge
+Options UI -> Background Service Worker -> offscreen audio playback
+```
 
 ## 프로젝트 구조
 
@@ -108,12 +84,37 @@ npm run lint
 manifest.json
 src/
   app/
-    popup/       # Popup UI
-    options/     # Settings UI
-    offscreen/   # 오디오 재생 런타임
+    popup/
+    options/
+    offscreen/
   scripts/
-    background/  # MV3 서비스 워커 (타이머 상태 머신)
-    content/     # 최소 콘텐츠 스크립트
+    background/
+    content/
   shared/
-    utils/       # 타입 및 공용 유틸
+    utils/
 ```
+
+## 기여
+
+PR 전에는 다음을 확인해 주세요.
+
+```bash
+npm run lint
+npm run build
+```
+
+수동 확인 권장 항목:
+
+- 실행 중 팝업 닫기 / 다시 열기
+- 알림 및 사운드 미리보기
+- 배지 카운트다운 갱신
+- 긴 휴식 전환 동작
+
+이슈에는 아래 정보를 포함해 주세요.
+
+- Chrome 버전과 OS
+- 사용한 설정값
+- 재현 단계
+- 기대 동작과 실제 동작
+
+권장 커밋 프리픽스: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
