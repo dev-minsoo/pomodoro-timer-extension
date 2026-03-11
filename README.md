@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.svg" alt="Pomodoro Timer Extension banner" width="100%" />
+  <img src="docs/banner.png" alt="Pomodoro Timer Extension banner" width="100%" />
 </p>
 
 <h1 align="center">Pomodoro Timer Extension</h1>
