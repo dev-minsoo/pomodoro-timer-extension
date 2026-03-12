@@ -26,6 +26,14 @@
 - Popup, Options, Offscreen 런타임을 역할별로 분리
 - MV3 제약 안에서도 알림, 사운드, 배지 카운트다운을 안정적으로 처리
 
+## 스크린샷
+
+<p align="center">
+  <img src="docs/pomodoro1.png" alt="포모도로 타이머 팝업 스크린샷" width="32%" />
+  <img src="docs/pomodoro2.png" alt="포모도로 타이머 설정 스크린샷" width="32%" />
+  <img src="docs/pomodoro3.png" alt="포모도로 타이머 런타임 스크린샷" width="32%" />
+</p>
+
 ## 왜 이 확장인가
 
 - MV3에서는 팝업 기반 타이머가 쉽게 끊깁니다

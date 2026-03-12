@@ -26,6 +26,14 @@ This extension keeps Pomodoro timing reliable by moving session state into the b
 - Popup, Options, and Offscreen runtimes are separated by responsibility
 - Notifications, sound preview, and badge countdown continue to work with MV3 constraints
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/pomodoro1.png" alt="Pomodoro timer popup screenshot" width="32%" />
+  <img src="docs/pomodoro2.png" alt="Pomodoro timer settings screenshot" width="32%" />
+  <img src="docs/pomodoro3.png" alt="Pomodoro timer extension runtime screenshot" width="32%" />
+</p>
+
 ## Why This Extension
 
 - Popup-only timers are fragile in MV3 because popup lifecycle is short
